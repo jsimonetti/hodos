@@ -145,7 +145,7 @@ func (m *Monitor) run() error {
 		m.l.Debugf("(%s) %d packets transmitted, %d packets received, %v%% packet loss\n",
 			m.interFace, stats.PacketsSent, stats.PacketsRecv, stats.PacketLoss)
 		m.l.Debugf("(%s) round-trip min/avg/max/stddev = %v/%v/%v/%v\n",
-			&m.interFace, stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt)
+			m.interFace, stats.MinRtt, stats.AvgRtt, stats.MaxRtt, stats.StdDevRtt)
 		close(end)
 	}
 

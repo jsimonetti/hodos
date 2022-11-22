@@ -28,7 +28,8 @@ func (s *Server) addICMPMonitor(ifi *config.Interface, src string, host config.H
 		return err
 	}
 
-	isUp := false
+	// start with the host up
+	isUp := true
 	m.Down(func() {
 		// debounce down
 		if isUp {

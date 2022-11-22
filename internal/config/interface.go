@@ -36,9 +36,11 @@ type Interface struct {
 	ICMPInterval  time.Duration
 	ICMPTimeout   time.Duration
 
-	MinimumUp int
-	upHostsv4 int32
-	upHostsv6 int32
+	MinimumUp    int
+	upHostsv4    int32
+	upHostsv6    int32
+	totalHostsv4 int32
+	totalHostsv6 int32
 
 	Hosts []Host
 }
@@ -125,6 +127,14 @@ func parseInterface(cfg cfgInterface, parent *Config) (*Interface, error) {
 		seen[host.Host.String()] = true
 
 		ifi.Hosts = append(ifi.Hosts, *host)
+		if host.Family == unix.AF_INET {
+			ifi.upHostsv4++
+			ifi.totalHostsv4++
+		}
+		if host.Family == unix.AF_INET6 {
+			ifi.upHostsv6++
+			ifi.totalHostsv6++
+		}
 	}
 
 	return ifi, nil
@@ -160,6 +170,9 @@ func (i *Interface) hostDownv4() bool {
 
 func (i *Interface) hostUpv4() bool {
 	up := atomic.AddInt32(&i.upHostsv4, 1)
+	if up > i.totalHostsv4 {
+		atomic.StoreInt32(&i.upHostsv4, i.totalHostsv4)
+	}
 	// only trigger monitor up if we are at mimimum, not above
 	return up == int32(i.MinimumUp)
 }
@@ -175,6 +188,9 @@ func (i *Interface) hostDownv6() bool {
 
 func (i *Interface) hostUpv6() bool {
 	up := atomic.AddInt32(&i.upHostsv6, 1)
+	if up > i.totalHostsv6 {
+		atomic.StoreInt32(&i.upHostsv6, i.totalHostsv6)
+	}
 	// only trigger monitor up if we are at mimimum, not above
 	return up == int32(i.MinimumUp)
 }
@@ -185,4 +201,11 @@ func (i *Interface) Up4() int32 {
 
 func (i *Interface) Up6() int32 {
 	return atomic.LoadInt32(&i.upHostsv6)
+}
+
+func (i *Interface) Up(family uint8) int32 {
+	if family == unix.AF_INET {
+		return i.Up4()
+	}
+	return i.Up6()
 }

@@ -33,7 +33,7 @@ func (s *Server) nextHopFail(ifi *config.Interface, family uint8, linkDown bool)
 		s.l.Debugf("linkDown: interface %v", ifi)
 	} else {
 		belowMinimum = ifi.HostDown(family)
-		s.l.Debugf("hostDown: family %s, interface %v", fam(family), ifi)
+		s.l.Printf("hostDown: family %s, interface %s, up %d/%d, below: %t", fam(family), ifi.Name, ifi.Up(family), ifi.MinimumUp, belowMinimum)
 	}
 	if linkDown || belowMinimum {
 		s.l.Printf("nextHopFail: family %s, interface %q", fam(family), ifi.Name)
@@ -52,7 +52,7 @@ func (s *Server) nextHopFail(ifi *config.Interface, family uint8, linkDown bool)
 
 func (s *Server) nextHopAvailable(ifi *config.Interface, family uint8) {
 	atMinimum := ifi.HostUp(family)
-	s.l.Debugf("hostUp: family %s, interface %v", fam(family), ifi)
+	s.l.Printf("hostUp: family %s, interface %s, up %d/%d, at: %t", fam(family), ifi.Name, ifi.Up(family), ifi.MinimumUp, atMinimum)
 	if atMinimum {
 		s.l.Printf("nextHopAvailable: family %s, interface %q", fam(family), ifi.Name)
 		out, err := s.execScript("UP", family, ifi)
