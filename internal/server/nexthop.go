@@ -108,7 +108,7 @@ func (s *Server) addGatewaysFor(ifi *config.Interface, family uint8) error {
 var maxMetric uint32 = 65534 // uint16 max size -1 so we never overflow
 
 func (s *Server) failGatewaysFor(ifi *config.Interface, family uint8) error {
-	routesync.WithMetric(maxMetric)(s.routeSync[ifi.Name])
+	routesync.WithMetric(maxMetric + ifi.Metric)(s.routeSync[ifi.Name])
 	ifIndex, err := net.InterfaceByName(ifi.Name)
 	if err != nil {
 		return err

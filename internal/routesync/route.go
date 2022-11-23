@@ -258,6 +258,7 @@ func (s *Sync) cleanup() error {
 	rtmsgs, _ := nl.Route.List()
 	for _, msg := range rtmsgs {
 		if msg.Attributes.Table == s.table {
+			msg.Flags = 0 // don't use flags
 			if err = nl.Route.Delete(&msg); err != nil {
 				s.l.Printf("routeCleanup: error deleting route from table %d: %s", s.table, err)
 			}
@@ -265,16 +266,15 @@ func (s *Sync) cleanup() error {
 				msg.Table = unix.RT_TABLE_MAIN
 				msg.Attributes.Table = unix.RT_TABLE_MAIN
 
-				// remove any failed/non-failed route from main table
-				req := msg
-				req.Attributes.Priority = s.metric
-				s.nlconn.Route.Delete(&req)
-				req.Attributes.Priority = maxMetric + s.metric
-				s.nlconn.Route.Delete(&req)
-
 				// restore the original route back to the main table
 				if err := s.nlconn.Route.Add(&msg); err != nil {
 					s.l.Printf("routeCleanup: error restoring route from table %d: %s", s.table, err)
+				}
+
+				// remove any failed/non-failed route from main table
+				msg.Attributes.Priority = s.metric
+				if err := s.nlconn.Route.Delete(&msg); err != nil {
+					s.l.Printf("could not delete route with ifi metric: %+v: %s", msg, err)
 				}
 			}
 		}
@@ -300,15 +300,15 @@ func (s *Sync) routeUpAction(m *rtnetlink.RouteMessage) error {
 	// we filter out some route types that are not useful here
 	if m.Type != unix.RTN_BROADCAST &&
 		m.Type != unix.RTN_LOCAL {
+		m.Flags = 0 // don't set flags
 		if m.Attributes.Gateway != nil {
-			newmetric := s.metric
-			if m.Flags == unix.RTNH_F_LINKDOWN { // link is down, so we must use the fail metric
-				newmetric = maxMetric + s.metric
-			}
-			if err := ChangeMetric(s.nlconn, *m, newmetric); err != nil {
+			//if m.Flags == unix.RTNH_F_LINKDOWN { // link is down, so we must use the fail metric
+			//	newmetric = maxMetric + s.metric
+			//}
+			if err := ChangeMetric(s.nlconn, *m, s.metric); err != nil {
 				// this error can be expected at initial startup
 				// since the interface will already have routes
-				s.l.Debugf("routeUpAction: change error: %s", err)
+				s.l.Printf("routeUpAction: change error: %s", err)
 			}
 		}
 		m.Table = uint8(s.table)
@@ -330,6 +330,7 @@ func (s *Sync) routeDownAction(m *rtnetlink.RouteMessage) error {
 	}
 
 	// we remove the route from the table here
+	m.Flags = 0 // don't set flags
 	m.Table = uint8(s.table)
 	m.Attributes.Table = s.table
 	return s.nlconn.Route.Delete(m)

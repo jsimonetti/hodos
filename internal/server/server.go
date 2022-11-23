@@ -78,7 +78,6 @@ func New(ctx context.Context, l log.Logger, config *config.Config) (*Server, err
 			if err := s.addRouteSync(ifi); err != nil {
 				return nil, err
 			}
-			routesync.WithMetric(ifi.Metric)(s.routeSync[ifi.Name])
 		}
 	}
 	return s, nil
