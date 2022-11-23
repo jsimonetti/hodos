@@ -78,6 +78,7 @@ func New(ctx context.Context, l log.Logger, config *config.Config) (*Server, err
 			if err := s.addRouteSync(ifi); err != nil {
 				return nil, err
 			}
+			routesync.WithMetric(ifi.Metric)(s.routeSync[ifi.Name])
 		}
 	}
 	return s, nil
@@ -106,11 +107,11 @@ func (s *Server) Start() error {
 
 func (s *Server) Stop() error {
 	// remove routes
-	s.l.Debugf("Server: removing temporary routes")
-	for _, ifi := range s.config.Interfaces {
-		s.deleteGatewaysFor(&ifi, unix.AF_INET)
-		s.deleteGatewaysFor(&ifi, unix.AF_INET6)
-	}
+	//	s.l.Debugf("Server: removing temporary routes")
+	//	for _, ifi := range s.config.Interfaces {
+	//		s.failGatewaysFor(&ifi, unix.AF_INET)
+	//		s.failGatewaysFor(&ifi, unix.AF_INET6)
+	//	}
 
 	s.l.Debugf("Server: tearing down icmp monitors")
 	// tear down monitoring

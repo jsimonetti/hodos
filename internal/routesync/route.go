@@ -45,6 +45,7 @@ type Sync struct {
 
 	myPid  uint32
 	nlconn *rtnetlink.Conn
+	metric uint32
 }
 
 // New will return an initialised route sync object
@@ -100,6 +101,15 @@ func WithRTConn(c *rtnetlink.Conn) Option {
 func WithPid(pid uint32) Option {
 	return func(m *Sync) error {
 		m.myPid = pid
+		return nil
+	}
+}
+
+// WithMetric is a functional Option to set
+// the metric for this monitor
+func WithMetric(metric uint32) Option {
+	return func(m *Sync) error {
+		m.metric = metric
 		return nil
 	}
 }
@@ -252,9 +262,17 @@ func (s *Sync) cleanup() error {
 				s.l.Printf("routeCleanup: error deleting route from table %d: %s", s.table, err)
 			}
 			if msg.Attributes.Gateway != nil {
-				// restore this route back to the main table
 				msg.Table = unix.RT_TABLE_MAIN
 				msg.Attributes.Table = unix.RT_TABLE_MAIN
+
+				// remove any failed/non-failed route from main table
+				req := msg
+				req.Attributes.Priority = s.metric
+				s.nlconn.Route.Delete(&req)
+				req.Attributes.Priority = maxMetric + s.metric
+				s.nlconn.Route.Delete(&req)
+
+				// restore the original route back to the main table
 				if err := s.nlconn.Route.Add(&msg); err != nil {
 					s.l.Printf("routeCleanup: error restoring route from table %d: %s", s.table, err)
 				}
@@ -263,6 +281,8 @@ func (s *Sync) cleanup() error {
 	}
 	return nil
 }
+
+var maxMetric uint32 = 65534 // uint16 max size -1 so we never overflow
 
 // routeUpAction will do two things:
 //  1. if this is a route from the RT_TABLE_LOCAL(255) table and
@@ -281,7 +301,15 @@ func (s *Sync) routeUpAction(m *rtnetlink.RouteMessage) error {
 	if m.Type != unix.RTN_BROADCAST &&
 		m.Type != unix.RTN_LOCAL {
 		if m.Attributes.Gateway != nil {
-			s.nlconn.Route.Delete(m)
+			newmetric := s.metric
+			if m.Flags == unix.RTNH_F_LINKDOWN { // link is down, so we must use the fail metric
+				newmetric = maxMetric + s.metric
+			}
+			if err := ChangeMetric(s.nlconn, *m, newmetric); err != nil {
+				// this error can be expected at initial startup
+				// since the interface will already have routes
+				s.l.Debugf("routeUpAction: change error: %s", err)
+			}
 		}
 		m.Table = uint8(s.table)
 		m.Attributes.Table = s.table

@@ -114,8 +114,8 @@ func (s *Server) linkUp(ifi *config.Interface, shutdown chan bool) {
 								}
 							}
 						}
-						// we start with everything up
-						s.addGatewaysFor(ifi, unix.AF_INET)
+						// we start with everything down
+						s.failGatewaysFor(ifi, unix.AF_INET)
 					}
 				}
 			case <-timer6.C:
@@ -144,8 +144,8 @@ func (s *Server) linkUp(ifi *config.Interface, shutdown chan bool) {
 								}
 							}
 						}
-						// we start with everything up
-						s.addGatewaysFor(ifi, unix.AF_INET6)
+						// we start with everything down
+						s.failGatewaysFor(ifi, unix.AF_INET6)
 					}
 				}
 			case <-shutdown:
