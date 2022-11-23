@@ -106,11 +106,11 @@ func (s *Server) Start() error {
 
 func (s *Server) Stop() error {
 	// remove routes
-	s.l.Debugf("Server: removing temporary routes")
-	for _, ifi := range s.config.Interfaces {
-		s.deleteGatewaysFor(&ifi, unix.AF_INET)
-		s.deleteGatewaysFor(&ifi, unix.AF_INET6)
-	}
+	//	s.l.Debugf("Server: removing temporary routes")
+	//	for _, ifi := range s.config.Interfaces {
+	//		s.failGatewaysFor(&ifi, unix.AF_INET)
+	//		s.failGatewaysFor(&ifi, unix.AF_INET6)
+	//	}
 
 	s.l.Debugf("Server: tearing down icmp monitors")
 	// tear down monitoring

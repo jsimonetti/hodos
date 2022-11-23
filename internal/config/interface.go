@@ -128,11 +128,11 @@ func parseInterface(cfg cfgInterface, parent *Config) (*Interface, error) {
 
 		ifi.Hosts = append(ifi.Hosts, *host)
 		if host.Family == unix.AF_INET {
-			ifi.upHostsv4++
+			//ifi.upHostsv4++
 			ifi.totalHostsv4++
 		}
 		if host.Family == unix.AF_INET6 {
-			ifi.upHostsv6++
+			//ifi.upHostsv6++
 			ifi.totalHostsv6++
 		}
 	}

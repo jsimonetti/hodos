@@ -18,6 +18,7 @@ import (
 	"os/exec"
 
 	"github.com/jsimonetti/hodos/internal/config"
+	"github.com/jsimonetti/hodos/internal/routesync"
 	"golang.org/x/sys/unix"
 )
 
@@ -46,7 +47,9 @@ func (s *Server) nextHopFail(ifi *config.Interface, family uint8, linkDown bool)
 		}
 
 		// delete all gateway routes from main for this interface
-		s.deleteGatewaysFor(ifi, family)
+		if err := s.failGatewaysFor(ifi, family); err != nil {
+			s.l.Printf("failed to mark the gateway as down: %s", err)
+		}
 	}
 }
 
@@ -65,11 +68,14 @@ func (s *Server) nextHopAvailable(ifi *config.Interface, family uint8) {
 
 		// copy all gateway routes from interface table to main and modify
 		// route priority to set metric
-		s.addGatewaysFor(ifi, family)
+		if err := s.addGatewaysFor(ifi, family); err != nil {
+			s.l.Printf("could not set avail: %s", err)
+		}
 	}
 }
 
 func (s *Server) addGatewaysFor(ifi *config.Interface, family uint8) error {
+	routesync.WithMetric(ifi.Metric)(s.routeSync[ifi.Name])
 	ifIndex, err := net.InterfaceByName(ifi.Name)
 	if err != nil {
 		return err
@@ -80,20 +86,29 @@ func (s *Server) addGatewaysFor(ifi *config.Interface, family uint8) error {
 	}
 
 	for _, msg := range msgs {
-		if msg.Attributes.Table == ifi.Table && msg.Family == family && msg.Attributes.OutIface == uint32(ifIndex.Index) && msg.Attributes.Gateway != nil {
+		if msg.Attributes.Table == ifi.Table &&
+			msg.Family == family &&
+			msg.Attributes.OutIface == uint32(ifIndex.Index) &&
+			msg.Attributes.Gateway != nil {
 			// Add this route to the main table
 			msg.Table = unix.RT_TABLE_MAIN
 			msg.Attributes.Table = unix.RT_TABLE_MAIN
-			msg.Attributes.Priority = ifi.Metric
-			if err := s.nlconn.Route.Replace(&msg); err != nil {
+			msg.Attributes.Priority = maxMetric + ifi.Metric
+			if err := routesync.ChangeMetric(s.nlconn, msg, ifi.Metric); err != nil {
+				// this error can be expected at initial startup
+				// since the interface will already have routes with a different metric
 				s.l.Printf("error adding gateway route %+v: %s", msg, err)
+				return err
 			}
 		}
 	}
 	return nil
 }
 
-func (s *Server) deleteGatewaysFor(ifi *config.Interface, family uint8) error {
+var maxMetric uint32 = 65534 // uint16 max size -1 so we never overflow
+
+func (s *Server) failGatewaysFor(ifi *config.Interface, family uint8) error {
+	routesync.WithMetric(maxMetric + ifi.Metric)(s.routeSync[ifi.Name])
 	ifIndex, err := net.InterfaceByName(ifi.Name)
 	if err != nil {
 		return err
@@ -104,9 +119,14 @@ func (s *Server) deleteGatewaysFor(ifi *config.Interface, family uint8) error {
 	}
 
 	for _, msg := range msgs {
-		if msg.Attributes.Table == unix.RT_TABLE_MAIN && msg.Family == family && msg.Attributes.OutIface == uint32(ifIndex.Index) &&
+		if msg.Attributes.Table == unix.RT_TABLE_MAIN &&
+			msg.Family == family &&
+			msg.Attributes.OutIface == uint32(ifIndex.Index) &&
 			msg.Attributes.Gateway != nil {
-			s.nlconn.Route.Delete(&msg)
+			if err := routesync.ChangeMetric(s.nlconn, msg, maxMetric+ifi.Metric); err != nil {
+				s.l.Debugf("error failing gateway route %+v: %s", msg, err)
+				return err
+			}
 		}
 	}
 	return nil

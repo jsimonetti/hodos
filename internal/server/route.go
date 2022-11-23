@@ -18,7 +18,11 @@ import (
 )
 
 func (s *Server) addRouteSync(ifi config.Interface) error {
-	m, err := routesync.New(s.ctx, ifi.Name, ifi.Table, routesync.Logger(s.l), routesync.WithPid(s.pid), routesync.WithRTConn(s.nlconn))
+	m, err := routesync.New(s.ctx, ifi.Name, ifi.Table,
+		routesync.Logger(s.l),
+		routesync.WithPid(s.pid),
+		routesync.WithRTConn(s.nlconn),
+		routesync.WithMetric(maxMetric+ifi.Metric))
 	if err != nil {
 		return err
 	}
