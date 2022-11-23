@@ -282,8 +282,6 @@ func (s *Sync) cleanup() error {
 	return nil
 }
 
-var maxMetric uint32 = 65534 // uint16 max size -1 so we never overflow
-
 // routeUpAction will do two things:
 //  1. if this is a route from the RT_TABLE_LOCAL(255) table and
 //     has scope RT_SCOPE_HOST, this is a local ip adres and we
