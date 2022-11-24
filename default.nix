@@ -3,7 +3,7 @@
 }:
 let
   version = "0.0.1";
-  vendorSha = "sha256-rG9ld6LMIQECdnDHlqvc+tCPhApoW4j/zsMJnvPAQgY=";
+  vendorSha = "sha256-/Dr3qxpSFNKwNJ1LUty42Yq55ZX8kikqMOdR0rdmzwI=";
   buildGoModule = if pkgs.lib.versionOlder pkgs.go.version "1.18" then pkgs.buildGo118Module else pkgs.buildGoModule;
 in
 buildGoModule {
