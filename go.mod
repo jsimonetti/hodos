@@ -3,7 +3,7 @@ module github.com/jsimonetti/hodos
 go 1.18
 
 require (
-	github.com/jsimonetti/rtnetlink v1.2.4
+	github.com/jsimonetti/rtnetlink v1.3.0
 	github.com/mdlayher/netlink v1.7.0
 	github.com/pelletier/go-toml v1.9.5
 	github.com/prometheus-community/pro-bing v0.1.0
