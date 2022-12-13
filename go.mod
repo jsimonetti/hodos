@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/jsimonetti/rtnetlink v1.3.0
-	github.com/mdlayher/netlink v1.7.0
+	github.com/mdlayher/netlink v1.7.1
 	github.com/pelletier/go-toml v1.9.5
 	github.com/prometheus-community/pro-bing v0.1.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
